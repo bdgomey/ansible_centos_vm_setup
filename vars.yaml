@@ -1,0 +1,3 @@
+files:
+  - ~/.bashrc
+  - /etc/skel/.bashrc

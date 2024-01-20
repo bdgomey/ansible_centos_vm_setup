@@ -1,0 +1,6 @@
+- name: Initial VM Setup
+  hosts: centos
+
+  tasks:
+  - name: Example from an Ansible Playbook
+    ansible.builtin.ping:

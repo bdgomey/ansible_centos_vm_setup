@@ -1,0 +1,112 @@
+- name: Initial VM Setup
+  hosts: centos
+
+
+
+  tasks:
+  - name: update centos virtual machine
+    yum:
+      name: "*"
+      state: latest
+    become: true
+  - name: install packages
+    yum:
+      name:
+      - epel-release
+      - python3.11
+      - fontconfig
+      - zip
+      - git
+      state: latest
+    become: true
+  
+  - name: install pip, oh my posh, and fonts
+    become: "{{ item.become }}"
+    shell:
+      cmd: "{{ item.cmd }}"
+    loop:
+      - cmd: python3.11 -m ensurepip --upgrade
+        become: false
+      - cmd: curl -s https://ohmyposh.dev/install.sh | bash -s -- -d ~/.local/bin
+        become: false
+      - cmd: mv ~/themes ~/.themes
+        become: false
+      - cmd: wget https://github.com/ryanoasis/nerd-fonts/releases/download/v3.1.1/CascadiaCode.zip
+        become: false
+      - cmd: unzip CascadiaCode.zip
+        become: false
+      - cmd: rm -rf ~/Cascadia*
+        become: false
+      - cmd: mv *.ttf /usr/share/fonts
+        become: true
+      - cmd: fc-cache /usr/share/fonts
+        become: true
+
+  - name: Replace bashrc file
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - ~/.bashrc
+      - /etc/skel/.bashrc
+    become: true
+
+  - name: setup python3.11 to use a py alias
+    become: "{{ item.become }}"
+    lineinfile:
+      path: "{{ item.path }}"
+      owner: "{{ item.owner }}"
+      create: true
+      state: present
+      line: |
+        # bashrc
+
+        # Source global definitions
+        if [ -f /etc/bashrc ]; then
+            . /etc/bashrc
+        fi
+
+        # User specific environment
+        if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]
+        then
+          PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+        fi
+        export PATH
+
+        # Uncomment the following line if you don't like systemctl's auto-paging feature:
+        # export SYSTEMD_PAGER=
+
+        # User specific aliases and functions
+        if [ -d ~/.bashrc.d ]; then
+              for rc in ~/.bashrc.d/*; do
+                if [ -f "$rc" ]; then
+                  . "$rc"
+                fi
+              done
+        fi
+
+        unset rc
+        eval "$(oh-my-posh init bash --config ~/.themes/tonybaloney.omp.json)"
+        alias python=python3.11
+        alias pip=pip3
+    loop:
+      - path: ~/.bashrc
+        owner: vagrant
+        become: no
+      - path: /etc/skel/.bashrc
+        owner: root
+        become: yes
+
+  - name: upgrade vim
+    become: "{{ item.become }}"
+    shell:
+      cmd: "{{ item.cmd }}"
+    loop:
+      - cmd: git clone https://github.com/vim/vim.git
+        become: false
+      - cmd: make -C vim/src
+        become: false
+      - cmd: make -C vim/src install
+        become: true
+      - cmd: rm -rf vim
+        become: false
